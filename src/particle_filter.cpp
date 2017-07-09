@@ -55,6 +55,11 @@ void ParticleFilter::updateWeights(double sensor_range, double std_landmark[],
 	//   and the following is a good resource for the actual equation to implement (look at equation 
 	//   3.33
 	//   http://planning.cs.uiuc.edu/node99.html
+	
+	// OObs in map = OPart in map + PartObs in map 
+	//	       = OPart in map + Rot*PartObs in part
+	// with Rot = [ cos(theta) -sin(theta) ] 
+	//	      [ sin(theta)  cos(theta) ]
 }
 
 void ParticleFilter::resample() {
