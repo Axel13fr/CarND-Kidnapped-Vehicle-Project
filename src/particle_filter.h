@@ -10,15 +10,20 @@
 #define PARTICLE_FILTER_H_
 
 #include "helper_functions.h"
+#include <random>
 
 struct Particle {
 
 	int id;
+    // State
 	double x;
 	double y;
 	double theta;
+    // Importance weight
 	double weight;
-	std::vector<int> associations;
+    // Id list of the landmarks the particle is associated to
+    std::vector<int> associations;
+    // Positions of the associated landmarks in map coordinates
 	std::vector<double> sense_x;
 	std::vector<double> sense_y;
 };
@@ -30,14 +35,22 @@ class ParticleFilter {
 	// Number of particles to draw
 	int num_particles; 
 	
-	
-	
 	// Flag, if filter is initialized
 	bool is_initialized;
 	
 	// Vector of weights of all particles
 	std::vector<double> weights;
-	
+
+    // Measurement noise X and Y
+    double std_x;
+    double std_y;
+
+//    std::random_device rd;
+//    std::mt19937 gen;
+//    std::normal_distribution<> gauss_x;
+//    std::normal_distribution<> gauss_y;
+//    std::normal_distribution<> gauss_yaw;
+
 public:
 	
 	// Set of current particles
@@ -49,6 +62,13 @@ public:
 
 	// Destructor
 	~ParticleFilter() {}
+
+    enum STATE_STD_E{
+        STD_X = 0,
+        STD_Y,
+        STD_YAW,
+        STD_SIZE
+    };
 
 	/**
 	 * init Initializes particle filter by initializing particles to Gaussian
@@ -84,13 +104,13 @@ public:
 	 * updateWeights Updates the weights for each particle based on the likelihood of the 
 	 *   observed measurements. 
 	 * @param sensor_range Range [m] of sensor
-	 * @param std_landmark[] Array of dimension 2 [standard deviation of range [m],
-	 *   standard deviation of bearing [rad]]
-	 * @param observations Vector of landmark observations
+     * @param std_landmark[] Array of dimension 2 [standard deviation of x [m],
+     *   standard deviation of y [m]
+     * @param observations Vector of landmark observations (Measurements)
 	 * @param map Map class containing map landmarks
 	 */
-	void updateWeights(double sensor_range, double std_landmark[], std::vector<LandmarkObs> observations,
-			Map map_landmarks);
+    void updateWeights(double sensor_range, double std_landmark[], std::vector<LandmarkObs> observations,
+            Map &map_landmarks);
 	
 	/**
 	 * resample Resamples from the updated set of particles to form
@@ -114,6 +134,34 @@ public:
 	const bool initialized() const {
 		return is_initialized;
 	}
+
+private:
+    /**
+     * @brief FindParticleAssociations
+     * @param p particle to find the associations of
+     * @param predicted predicted measurements in world coordinates
+     * @param map_landmarks container of the landmarks in world coordinates
+     */
+    void FindParticleAssociations(Particle &p, std::vector<LandmarkObs> predicted,
+                                  Map& map_landmarks);
+    /**
+     * @brief ComputeParticleWeight computes the weight of a given particle and its measurement
+     * associations using the predicted measurements input in map coordinates
+     * @param p the particle
+     * @param predicted predicted measurements in map coordinates
+     */
+    void ComputeParticleWeight(Particle &p, const std::vector<LandmarkObs> predicted);
+    /**
+     * @brief GaussianProbability : std_x and std_y of the particle filter must have been
+     * init before calling this function
+     * @param x measurement
+     * @param y measurement
+     * @param ux average on x
+     * @param uy average on y
+     * @return the probability
+     */
+    double GaussianProbability(const double x,const double y,const double ux,const double uy);
+    void NormalizeWeights();
 };
 
 
