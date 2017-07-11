@@ -54,7 +54,7 @@ class ParticleFilter {
 public:
 	
 	// Set of current particles
-	std::vector<Particle> particles;
+    std::vector<Particle> particles;
 
 	// Constructor
 	// @param M Number of particles

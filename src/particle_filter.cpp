@@ -104,7 +104,7 @@ void ParticleFilter::FindParticleAssociations(Particle& p,const std::vector<Land
 
 double ParticleFilter::GaussianProbability(const double x,const double y,const double ux,const double uy)
 {
-    const double factor = 1/(2*M_PI*sqrt(std_x*std_y));
+    const double factor = 1/sqrt(2.0*M_PI*std_x*std_y);
     const auto x_d2 = (x - ux)*(x - ux);
     const auto y_d2 = (y - uy)*(y - uy);
     return factor*exp(-( x_d2/(2*std_x) + y_d2/(2*std_y)));
@@ -128,8 +128,11 @@ void ParticleFilter::NormalizeWeights()
     for(const auto& p : particles){
         sum += p.weight;
     }
+    weights.clear();
     for(auto& p : particles){
         p.weight /= sum;
+        // Copy of the weights for reuse in resampling: optimization
+        weights.push_back(p.weight);
     }
 }
 
@@ -167,7 +170,7 @@ void ParticleFilter::updateWeights(double sensor_range, double std_landmark[],
     }
 
     //4. Normalize weights to finish the update
-    NormalizeWeights();
+    //NormalizeWeights(); //-->  Not needed yhen using discrete_distribution !
 
 }
 
@@ -175,7 +178,18 @@ void ParticleFilter::resample() {
     // TODO: Resample particles with replacement with probability proportional to their weight.
     // NOTE: You may find std::discrete_distribution helpful here.
     //   http://en.cppreference.com/w/cpp/numeric/random/discrete_distribution
+    std::default_random_engine gen;
+    // will generate an index in the range [0, number of particles], each with a probability
+    // corresponding to the weights
+    std::discrete_distribution<size_t> rand(weights.begin(),weights.end());
 
+    // Draw particles randomly and save them
+    std::vector<Particle> resampled;
+    for(size_t i = 0 ; i < particles.size() ; i++){
+        resampled.push_back(particles[rand(gen)]);
+    }
+    // Replace old particles with new resampled selection
+    particles = resampled;
 }
 
 Particle ParticleFilter::SetAssociations(Particle particle, std::vector<int> associations, std::vector<double> sense_x, std::vector<double> sense_y)
