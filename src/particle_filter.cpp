@@ -50,20 +50,22 @@ void ParticleFilter::prediction(double delta_t, double std_pos[], double velocit
     std::normal_distribution<> gauss_yaw(0,std_pos[STD_YAW]);
 
     for(auto& p : particles){
+        // First update particles based on elapsed time
         const auto yaw = p.theta;
 
         //avoid division by zero
         if (fabs(yaw_rate) > 0.001) {
             p.x = p.x + velocity/yaw_rate * ( sin (yaw + yaw_rate*delta_t) - sin(yaw));
             p.y = p.y + velocity/yaw_rate * ( cos(yaw) - cos(yaw+yaw_rate*delta_t) );
-            //p.theta = p.theta;
+            p.theta += yaw_rate*delta_t;
         }
         else {
             p.x += velocity*delta_t*cos(yaw);
             p.y += velocity*delta_t*sin(yaw);
-            p.theta += yaw;
+            //p.theta += 0;
         }
 
+        // Add process noise
         p.x += gauss_x(gen);
         p.y += gauss_y(gen);
         p.theta += gauss_yaw(gen);
@@ -92,7 +94,8 @@ void ParticleFilter::FindParticleAssociations(Particle& p,const std::vector<Land
             // Save closest map land mark
             auto new_dist = max(dist,lmark.distToMapLandMark(map_lmark));
             if(new_dist < dist){
-                closest = {map_lmark.id_i,map_lmark.x_f,map_lmark.y_f};
+                closest = {map_lmark.id_i,static_cast<double>(map_lmark.x_f),
+                                          static_cast<double>(map_lmark.y_f)};
                 dist = new_dist;
             }
         }
@@ -104,10 +107,11 @@ void ParticleFilter::FindParticleAssociations(Particle& p,const std::vector<Land
 
 double ParticleFilter::GaussianProbability(const double x,const double y,const double ux,const double uy)
 {
-    const double factor = 1/sqrt(2.0*M_PI*std_x*std_y);
+    const double factor = 1/(2.0*M_PI*std_x*std_y);
     const auto x_d2 = (x - ux)*(x - ux);
     const auto y_d2 = (y - uy)*(y - uy);
-    return factor*exp(-( x_d2/(2*std_x) + y_d2/(2*std_y)));
+
+    return factor*exp(-( x_d2/(2*std_x*std_x) + y_d2/(2*std_y*std_y)) );
 }
 
 void ParticleFilter::ComputeParticleWeight(Particle& p,const std::vector<LandmarkObs> predicted)
@@ -150,9 +154,14 @@ void ParticleFilter::updateWeights(double sensor_range, double std_landmark[],
         std::vector<LandmarkObs> predicted;
         // 1. Transform the observation from veh coordinates to map coordinates
         for(const auto& obs_veh : observations){
-            // observation in map coordinates (O is the center of the map coord)
+            // observation to map coordinates from particle (vehicle) coordinates
+            // O is the center of the map coord
+            // Obs is the observation position
+            // Part is the particle position
             LandmarkObs obs_map;
+            // -->           -->            -->
             // OObs in map = OPart in map + PartObs in map
+            //           -->                ---->
             //	       = OPart in map + Rot*PartObs in part
             // with Rot = [ cos(theta) -sin(theta) ]
             //	          [ sin(theta)  cos(theta) ]
@@ -179,7 +188,7 @@ void ParticleFilter::resample() {
     // NOTE: You may find std::discrete_distribution helpful here.
     //   http://en.cppreference.com/w/cpp/numeric/random/discrete_distribution
     std::default_random_engine gen;
-    // will generate an index in the range [0, number of particles], each with a probability
+    // will draw an index in the range [0, number of particles], each with a probability
     // corresponding to the weights
     std::discrete_distribution<size_t> rand(weights.begin(),weights.end());
 

@@ -139,8 +139,8 @@ private:
     /**
      * @brief FindParticleAssociations
      * @param p particle to find the associations of
-     * @param predicted predicted measurements in world coordinates
-     * @param map_landmarks container of the landmarks in world coordinates
+     * @param predicted predicted measurements in map coordinates
+     * @param map_landmarks container of the landmarks in map coordinates
      */
     void FindParticleAssociations(Particle &p, std::vector<LandmarkObs> predicted,
                                   Map& map_landmarks);
