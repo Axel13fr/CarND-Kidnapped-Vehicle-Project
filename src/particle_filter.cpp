@@ -92,7 +92,7 @@ void ParticleFilter::FindParticleAssociations(Particle& p,const std::vector<Land
         LandmarkObs closest;
         for(const auto& map_lmark : map_landmarks.landmark_list){
             // Save closest map land mark
-            auto new_dist = max(dist,lmark.distToMapLandMark(map_lmark));
+            auto new_dist = min(dist,lmark.distToMapLandMark(map_lmark));
             if(new_dist < dist){
                 closest = {map_lmark.id_i,static_cast<double>(map_lmark.x_f),
                                           static_cast<double>(map_lmark.y_f)};
