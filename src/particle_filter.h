@@ -41,13 +41,6 @@ class ParticleFilter {
 	// Vector of weights of all particles
 	std::vector<double> weights;
 
-    // Measurement noise X and Y
-    double std_x;
-    double std_y;
-
-    // For debug
-    int rejected_particles;
-
 public:
 	
 	// Set of current particles
@@ -148,7 +141,7 @@ private:
      * @param p the particle
      * @param predicted predicted measurements in map coordinates
      */
-    void ComputeParticleWeight(Particle &p, const std::vector<LandmarkObs> predicted);
+    void ComputeParticleWeight(Particle &p, const std::vector<LandmarkObs> predicted,double std_landmark[]);
     /**
      * @brief GaussianProbability : std_x and std_y of the particle filter must have been
      * init before calling this function
@@ -158,7 +151,7 @@ private:
      * @param uy average on y
      * @return the probability
      */
-    double GaussianProbability(const double x,const double y,const double ux,const double uy);
+    double GaussianProbability(const double x, const double y, const double ux, const double uy, double std_landmark[]);
     void NormalizeWeights();
 };
 
