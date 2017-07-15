@@ -146,7 +146,8 @@ void ParticleFilter::NormalizeWeights()
     for(const auto& p : particles){
         sum += p.weight;
     }
-    //assert(sum != 0);
+    // Divergence !!!
+    assert(sum != 0);
 
     weights.clear();
     for(auto& p : particles){
@@ -167,6 +168,10 @@ void ParticleFilter::updateWeights(double sensor_range, double std_landmark[],
     rejected_particles = 0;
 
     for(auto& p : particles){
+        // Remove previous associations
+        p.associations.clear();
+        p.sense_x.clear();
+        p.sense_y.clear();
 
         std::vector<LandmarkObs> predicted;
         // 1. Transform the observation from veh coordinates to map coordinates
@@ -214,6 +219,11 @@ void ParticleFilter::resample() {
     // Draw particles randomly and save them
     std::vector<Particle> resampled;
     for(size_t i = 0 ; i < particles.size() ; i++){
+//        auto selected_p = particles[rand(gen)];
+        // Clear associations for next time
+//        selected_p.associations.clear();
+//        selected_p.sense_x.clear();
+//        selected_p.sense_y.clear();
         resampled.push_back(particles[rand(gen)]);
     }
     // Replace old particles with new resampled selection
