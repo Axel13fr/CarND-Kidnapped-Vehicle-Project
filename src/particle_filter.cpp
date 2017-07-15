@@ -112,8 +112,11 @@ void ParticleFilter::FindParticleAssociations(Particle& p,const std::vector<Land
     }
 }
 
-double ParticleFilter::GaussianProbability(const double x,const double y,const double ux,const double uy)
+double ParticleFilter::GaussianProbability(const double x,const double y,const double ux,const double uy,
+                                           double std_landmark[])
 {
+    auto std_x = std_landmark[0];
+    auto std_y = std_landmark[1];
     const double factor = 1/(2.0*M_PI*std_x*std_y);
     const auto x_d2 = (x - ux)*(x - ux);
     const auto y_d2 = (y - uy)*(y - uy);
@@ -121,7 +124,7 @@ double ParticleFilter::GaussianProbability(const double x,const double y,const d
     return factor*exp(-( x_d2/(2*std_x*std_x) + y_d2/(2*std_y*std_y)) );
 }
 
-void ParticleFilter::ComputeParticleWeight(Particle& p,const std::vector<LandmarkObs> predicted)
+void ParticleFilter::ComputeParticleWeight(Particle& p, const std::vector<LandmarkObs> predicted, double std_landmark[])
 {
     p.weight = 1;
     // for each associated map points
@@ -129,7 +132,8 @@ void ParticleFilter::ComputeParticleWeight(Particle& p,const std::vector<Landmar
         auto measurement_likelihood = GaussianProbability(p.sense_x[i], // map associated landmark
                                                           p.sense_y[i],
                                                           predicted[i].x, // measurement
-                                                          predicted[i].y);
+                                                          predicted[i].y,
+                                                          std_landmark);
         p.weight *= measurement_likelihood;
     }
 
@@ -158,9 +162,6 @@ void ParticleFilter::updateWeights(double sensor_range, double std_landmark[],
     //   more about this distribution here: https://en.wikipedia.org/wiki/Multivariate_normal_distribution
     // NOTE: The observations are given in the VEHICLE'S coordinate system. Your particles are located
     //   according to the MAP'S coordinate system.
-    std_x = std_landmark[0];
-    std_y = std_landmark[1];
-    rejected_particles = 0;
 
     for(auto& p : particles){
 
@@ -187,7 +188,7 @@ void ParticleFilter::updateWeights(double sensor_range, double std_landmark[],
         FindParticleAssociations(p,predicted,map_landmarks);
 
         //3. Compute weight
-        ComputeParticleWeight(p,predicted);
+        ComputeParticleWeight(p,predicted,std_landmark);
 
         // Remove associations now that weights have been computed
         p.associations.clear();
