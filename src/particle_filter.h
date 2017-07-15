@@ -45,11 +45,8 @@ class ParticleFilter {
     double std_x;
     double std_y;
 
-//    std::random_device rd;
-//    std::mt19937 gen;
-//    std::normal_distribution<> gauss_x;
-//    std::normal_distribution<> gauss_y;
-//    std::normal_distribution<> gauss_yaw;
+    // For debug
+    int rejected_particles;
 
 public:
 	
@@ -142,8 +139,9 @@ private:
      * @param predicted predicted measurements in map coordinates
      * @param map_landmarks container of the landmarks in map coordinates
      */
-    void FindParticleAssociations(Particle &p, std::vector<LandmarkObs> predicted,
+    void FindParticleAssociations(Particle &p,const std::vector<LandmarkObs> predicted,
                                   Map& map_landmarks);
+    static constexpr int NO_ASSOCIATION_FOUND_ID = -1;
     /**
      * @brief ComputeParticleWeight computes the weight of a given particle and its measurement
      * associations using the predicted measurements input in map coordinates

@@ -14,6 +14,7 @@
 #include <sstream>
 #include <string>
 #include <iterator>
+#include <assert.h>
 
 #include "particle_filter.h"
 
@@ -26,9 +27,9 @@ void ParticleFilter::init(double x, double y, double theta, double std[]) {
     // Add random Gaussian noise to each particle.
     // NOTE: Consult particle_filter.h for more information about this method (and others in this file).
     std::default_random_engine gen;
-    std::normal_distribution<> gauss_x(x,std[STD_X]);
-    std::normal_distribution<> gauss_y(y,std[STD_Y]);
-    std::normal_distribution<> gauss_yaw(theta,std[STD_YAW]);
+    std::normal_distribution<> gauss_x(0,std[STD_X]);
+    std::normal_distribution<> gauss_y(0,std[STD_Y]);
+    std::normal_distribution<> gauss_yaw(0,std[STD_YAW]);
 
     for(int i = 0; i < num_particles; i++){
         Particle p{i,x + gauss_x(gen),y + gauss_y(gen),theta + gauss_yaw(gen),1.0,{},{},{}};
@@ -84,21 +85,26 @@ void ParticleFilter::dataAssociation(std::vector<LandmarkObs> predicted, std::ve
 
 }
 
-void ParticleFilter::FindParticleAssociations(Particle& p,const std::vector<LandmarkObs> predicted,Map& map_landmarks)
+void ParticleFilter::FindParticleAssociations(Particle& p,const std::vector<LandmarkObs> predicted,
+                                              Map& map_landmarks)
 {
-    // Twice the sensor range
-    double dist = 200;
     for(const auto& lmark : predicted){
-        LandmarkObs closest;
+        // Twice the sensor range
+        double dist = 200;
+
+        // Use special id to init the closest landmark in case no map
+        // correspondance is found
+        LandmarkObs closest{NO_ASSOCIATION_FOUND_ID,0,0};
         for(const auto& map_lmark : map_landmarks.landmark_list){
             // Save closest map land mark
             auto new_dist = min(dist,lmark.distToMapLandMark(map_lmark));
             if(new_dist < dist){
                 closest = {map_lmark.id_i,static_cast<double>(map_lmark.x_f),
-                                          static_cast<double>(map_lmark.y_f)};
+                           static_cast<double>(map_lmark.y_f)};
                 dist = new_dist;
             }
         }
+
         p.associations.push_back(closest.id);
         p.sense_x.push_back(closest.x);
         p.sense_y.push_back(closest.y);
@@ -119,11 +125,19 @@ void ParticleFilter::ComputeParticleWeight(Particle& p,const std::vector<Landmar
     p.weight = 1;
     // for each associated map points
     for(size_t i = 0; i < predicted.size() ; i++){
-        p.weight *= GaussianProbability(p.sense_x[i], // map associated landmark
-                                        p.sense_y[i],
-                                        predicted[i].x, // measurement
-                                        predicted[i].y);
+        if(p.associations[i] == NO_ASSOCIATION_FOUND_ID){
+            p.weight = 0;
+            rejected_particles++;
+            break;
+        }
+
+        auto measurement_likelihood = GaussianProbability(p.sense_x[i], // map associated landmark
+                                                          p.sense_y[i],
+                                                          predicted[i].x, // measurement
+                                                          predicted[i].y);
+        p.weight *= measurement_likelihood;
     }
+
 }
 
 void ParticleFilter::NormalizeWeights()
@@ -132,6 +146,8 @@ void ParticleFilter::NormalizeWeights()
     for(const auto& p : particles){
         sum += p.weight;
     }
+    //assert(sum != 0);
+
     weights.clear();
     for(auto& p : particles){
         p.weight /= sum;
@@ -148,8 +164,9 @@ void ParticleFilter::updateWeights(double sensor_range, double std_landmark[],
     //   according to the MAP'S coordinate system.
     std_x = std_landmark[0];
     std_y = std_landmark[1];
+    rejected_particles = 0;
 
-    for(auto p : particles){
+    for(auto& p : particles){
 
         std::vector<LandmarkObs> predicted;
         // 1. Transform the observation from veh coordinates to map coordinates
@@ -178,8 +195,10 @@ void ParticleFilter::updateWeights(double sensor_range, double std_landmark[],
 
     }
 
+    //cout << "Discarded Particles: " << rejected_particles << endl;
+
     //4. Normalize weights to finish the update
-    //NormalizeWeights(); //-->  Not needed yhen using discrete_distribution !
+    NormalizeWeights();
 
 }
 
