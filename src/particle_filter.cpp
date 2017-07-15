@@ -105,6 +105,7 @@ void ParticleFilter::FindParticleAssociations(Particle& p,const std::vector<Land
             }
         }
 
+        assert(closest.id != NO_ASSOCIATION_FOUND_ID);
         p.associations.push_back(closest.id);
         p.sense_x.push_back(closest.x);
         p.sense_y.push_back(closest.y);
@@ -125,12 +126,6 @@ void ParticleFilter::ComputeParticleWeight(Particle& p,const std::vector<Landmar
     p.weight = 1;
     // for each associated map points
     for(size_t i = 0; i < predicted.size() ; i++){
-        if(p.associations[i] == NO_ASSOCIATION_FOUND_ID){
-            p.weight = 0;
-            rejected_particles++;
-            break;
-        }
-
         auto measurement_likelihood = GaussianProbability(p.sense_x[i], // map associated landmark
                                                           p.sense_y[i],
                                                           predicted[i].x, // measurement
@@ -168,10 +163,6 @@ void ParticleFilter::updateWeights(double sensor_range, double std_landmark[],
     rejected_particles = 0;
 
     for(auto& p : particles){
-        // Remove previous associations
-        p.associations.clear();
-        p.sense_x.clear();
-        p.sense_y.clear();
 
         std::vector<LandmarkObs> predicted;
         // 1. Transform the observation from veh coordinates to map coordinates
@@ -198,6 +189,11 @@ void ParticleFilter::updateWeights(double sensor_range, double std_landmark[],
         //3. Compute weight
         ComputeParticleWeight(p,predicted);
 
+        // Remove associations now that weights have been computed
+        p.associations.clear();
+        p.sense_x.clear();
+        p.sense_y.clear();
+
     }
 
     //cout << "Discarded Particles: " << rejected_particles << endl;
@@ -219,13 +215,9 @@ void ParticleFilter::resample() {
     // Draw particles randomly and save them
     std::vector<Particle> resampled;
     for(size_t i = 0 ; i < particles.size() ; i++){
-//        auto selected_p = particles[rand(gen)];
-        // Clear associations for next time
-//        selected_p.associations.clear();
-//        selected_p.sense_x.clear();
-//        selected_p.sense_y.clear();
         resampled.push_back(particles[rand(gen)]);
     }
+
     // Replace old particles with new resampled selection
     particles = resampled;
 }
